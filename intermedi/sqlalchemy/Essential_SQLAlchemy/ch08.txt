@@ -1,0 +1,222 @@
+chapter: Inheritance Mapping
+==================
+class Product(object):
+    def __init__(self, sku, msrp):
+        self.sku = sku
+        self.msrp = msrp
+    def __repr__(self):
+        return '<%s %s>' % (
+            self.__class__.__name__, self.sku)
+
+class Clothing(Product):
+    def __init__(self, sku, msrp, clothing_info):
+        Product.__init__(self, sku, msrp)
+        self.clothing_info = clothing_info
+
+class Accessory(Product):
+    def __init__(self, sku, msrp, accessory_info):
+        Product.__init__(self, sku, msrp)
+        self.accessory_info = accessory_info
+    
+    
+====================================
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True),
+    Column('msrp', Numeric),
+    Column('clothing_info', String),
+    Column('accessory_info', String),
+    Column('product_type', String(1), nullable=False))
+    
+    
+====================================
+mapper(
+    Product, product_table,
+    polymorphic_on=product_table.c.product_type,
+    polymorphic_identity='P')
+
+mapper(Clothing, inherits=Product,
+       polymorphic_identity='C')
+
+mapper(Accessory, inherits=Product,
+       polymorphic_identity='A')
+    
+    
+====================================
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True),
+    Column('msrp', Numeric))
+
+clothing_table = Table(
+    'clothing', metadata,
+    Column('sku', String(20), primary_key=True),
+    Column('msrp', Numeric),
+    Column('clothing_info', String))
+
+accessory_table = Table(
+    'accessory', metadata,
+    Column('sku', String(20), primary_key=True),
+    Column('msrp', Numeric),
+    Column('accessory_info', String))
+    
+    
+====================================
+mapper(Product, product_table)
+mapper(Clothing, clothing_table)
+mapper(Accessory, accessory_table)
+    
+    
+====================================
+mapper(
+    Product, product_table, select_table=punion,
+    polymorphic_on=punion.c.type_,
+    polymorphic_identity='P')
+mapper(Clothing, clothing_table, inherits=Product,
+       polymorphic_identity='C',
+       concrete=True)
+mapper(Accessory, accessory_table, inherits=Product,
+       polymorphic_identity='A',
+       concrete=True)
+    
+    
+====================================
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True),
+    Column('msrp', Numeric),
+    Column('product_type', String(1), nullable=False))
+
+clothing_table = Table(
+    'clothing', metadata,
+    Column('sku', None, ForeignKey('product.sku'),
+           primary_key=True),
+    Column('clothing_info', String))
+
+accessory_table = Table(
+    'accessory', metadata,
+    Column('sku', None, ForeignKey('product.sku'),
+           primary_key=True),
+    Column('accessory_info', String))
+    
+    
+====================================
+mapper(
+    Product, product_table, 
+    polymorphic_on=product_table.c.product_type,
+    polymorphic_identity='P')
+
+mapper(Clothing, clothing_table, inherits=Product,
+       polymorphic_identity='C')
+
+mapper(Accessory, accessory_table, inherits=Product,
+       polymorphic_identity='A')
+    
+    
+====================================
+mapper(
+    Product, product_table, 
+    polymorphic_on=product_table.c.product_type,
+    polymorphic_identity='P',
+    polymorphic_fetch='deferred')
+
+mapper(Clothing, clothing_table, inherits=Product,
+       polymorphic_identity='C')
+
+mapper(Accessory, accessory_table, inherits=Product,
+       polymorphic_identity='A')
+    
+    
+====================================
+pjoin = product_table
+pjoin = pjoin.outerjoin(clothing_table)
+pjoin = pjoin.outerjoin(accessory_table)
+
+mapper(
+    Product, product_table, 
+    polymorphic_on=product_table.c.product_type,
+    polymorphic_identity='P',
+    select_table=pjoin)
+
+mapper(Clothing, clothing_table, inherits=Product,
+       polymorphic_identity='C')
+
+mapper(Accessory, accessory_table, inherits=Product,
+       polymorphic_identity='A')
+    
+    
+====================================
+store_table = Table(
+    'store', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', String))
+
+inventory_table = Table(
+    'inventory', metadata,
+    Column('store_id', None, ForeignKey('store.id')),
+    Column('product_id', None, ForeignKey('product.sku')),
+    Column('quantity', Integer, default=0)
+
+class Store(object): pass
+
+class Inventory(object): pass
+
+mapper(Store, store_table, properties=dict(
+    inventory=relation(Inventory, backref='store')))
+
+mapper(Inventory, inventory_table, properties=dict(
+    product=relation(Product, backref='inventory')))
+    
+    
+====================================
+vendor_table = Table(
+    'vendor', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', String))
+
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True),
+    Column('msrp', Numeric),
+    Column('vendor_id', None, ForeignKey('vendor.id'))
+
+clothing_table = Table(
+    'clothing', metadata,
+    Column('sku', String(20), primary_key=True),
+    Column('msrp', Numeric),
+    Column('vendor_id', None, ForeignKey('vendor.id'),
+    Column('clothing_info', String))
+
+accessory_table = Table(
+    'accessory', metadata,
+    Column('sku', String(20), primary_key=True),
+    Column('msrp', Numeric),
+    Column('vendor_id', None, ForeignKey('vendor.id'),
+    Column('accessory_info', String))
+
+punion = polymorphic_union(
+    dict(P=product_table,
+         C=clothing_table,
+         A=accessory_table),
+    'type_')
+
+mapper(
+    Product, product_table, select_table=punion,
+    polymorphic_on=punion.c.type_,
+    polymorphic_identity='P')
+
+mapper(Clothing, clothing_table, inherits=Product,
+       polymorphic_identity='C',
+       concrete=True)
+
+mapper(Accessory, accessory_table, inherits=Product,
+       polymorphic_identity='A',
+       concrete=True)
+
+class Vendor(object): pass
+
+mapper(Vendor, vendor_table, properties=dict(
+    products=relation(Product)))
+    
+    
+==================

@@ -1,0 +1,305 @@
+chapter: Engines and MetaData
+==================
+# Create a connection to a SQLite in-memory database
+engine = create_engine('sqlite://')
+
+# Create a connection to a SQLite on-disk database "data.sqlite"
+engine = create_engine('sqlite:///data.sqlite')
+
+# Create a connection to a PostGreSQL database
+engine = create_engine('postgres://rick:foo@localhost:5432/pg_db')
+
+# Create a connection to a MySQL database
+engine = create_engine('mysql://localhost/mysql_db')
+
+# Create a connection to an Oracle database (via TNS)
+engine = create_engine('oracle://rick:foo@oracle_tns')
+
+# Create a connection to an Oracle database (without a TNS name)
+engine =
+... create_engine('oracle://rick:foo@localhost:1521/oracle_sid')
+    
+    
+====================================
+url='postgres://rick:foo@localhost/pg_db?arg1=foo&arg2=bar'
+engine = create_engine(url)
+    
+    
+====================================
+engine = create_engine('postgres://rick:foo@localhost/pg_db',
+    connect_args=dict(arg1='foo', arg2='bar'))
+    
+    
+====================================
+import psycopg
+def connect_pg():
+    return psycopg.connect(user='rick', host='localhost')
+engine = create_engine('postgres://', creator=connect_pg)
+    
+    
+====================================
+import logging
+handler = logging.FileHandler('sqlalchemy.engine.log')
+handler.level = logging.DEBUG
+logging.getLogger('sqlalchemy.engine').addHandler(handler)
+    
+    
+====================================
+conn = engine.connect()
+result = conn.execute('select user_name, email_address from
+... tf_user')
+for row in result:
+    print 'User name: %s Email address: %s' % (
+        row['user_name'], row['email_address'])
+conn.close()
+    
+    
+====================================
+from sqlalchemy import pool
+import psycopg2
+psycopg = pool.manage(psycopg2)
+
+connection = psycopg.connect(database='mydb', 
+    username='rick', password='foo')
+    
+    
+====================================
+from sqlalchemy import pool
+import psycopg2
+import sqlite
+
+def getconn_pg():
+    c = psycopg2.connect(database='mydb', username='rick',
+	    password='foo')
+    return c
+
+def getconn_sl():
+    c = sqlite.connect(filename='devdata.sqlite')
+    return c
+
+pool_pg = pool.QueuePool(getconn_pg, use_threadlocal=True)
+
+# SQLite requires use of the SingletonThreadPool
+	    pool_sl = pool.SingletonThreadPool(getconn_sl)
+    
+    
+====================================
+# create an unbound MetaData
+unbound_meta = MetaData()
+
+# create an Engine and bind the MetaData to it
+db1 = create_engine('sqlite://')
+unbound_meta.bind = db
+
+# Create an engine and then a bound MetaData
+db2 = MetaData('sqlite:///test1.db')
+bound_meta1 = MetaData(db2)
+
+# Create a bound MetaData with an implicitly created engine
+bound_meta2 = MetaData('sqlite:///test2.db')
+    
+    
+====================================
+table.create()
+    
+    
+====================================
+table.create(bind=some_engine_or_connection)
+    
+    
+====================================
+from sqlalchemy import *
+from datetime import datetime
+
+metadata=MetaData()
+user_table = Table(
+    'tf_user', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('user_name', Unicode(16), unique=True, nullable=False),
+Column('email_address', Unicode(255), unique=True, nullable=False),
+    Column('password', Unicode(40), nullable=False),
+    Column('first_name', Unicode(255), default=''),
+    Column('last_name', Unicode(255), default=''),
+    Column('created', DateTime, default=datetime.now))
+    
+    
+====================================
+brand_table = Table(
+    'brand', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', Unicode(255), unique=True, nullable=False))
+
+product_table = Table(
+    'product', metadata,
+Column('brand_id', Integer, ForeignKey('brand.id'),
+... primary_key=True),
+    Column('sku', Unicode(80), primary_key=True))
+
+style_table = Table(
+    'style', metadata,
+    Column('brand_id', Integer, primary_key=True),
+    Column('sku', Unicode(80), primary_key=True),
+    Column('code', Unicode(80), primary_key=True),
+    ForeignKeyConstraint(['brand_id', 'sku'], 
+                         ['product.brand_id', 
+                          'product.sku']))
+    
+    
+====================================
+db = create_engine('sqlite:///devdata.sqlite')
+brand_table = Table('brand', metadata, autoload=True,
+... autoload_with=db)
+    
+    
+====================================
+brand_table = Table('brand', metadata, 
+    Column('name', Unicode(255)), # override the reflected type
+    autoload=True)
+    
+    
+====================================
+db = create_engine('sqlite:///devdata.sqlite')
+metadata = MetaData(bind=db, reflect=True)
+brand_table = metadata.tables['brand']
+    
+    
+====================================
+product_table = Table(
+    'product', metadata,
+Column('brand_id', Integer, ForeignKey('brand.id'),
+... primary_key=True),
+    Column('sku', Unicode(80), primary_key=True))
+    
+    
+====================================
+product_table = Table(
+    'product', metadata,
+    Column('brand_id', Integer, ForeignKey('brand.id')),
+    Column('sku', Unicode(80)),
+    PrimaryKeyConstraint('brand_id', 'sku', name='prikey'))
+    
+    
+====================================
+style_table = Table(
+    'style', metadata,
+    Column('brand_id', Integer, primary_key=True),
+    Column('sku', Unicode(80), primary_key=True),
+    Column('code', Unicode(80), primary_key=True),
+    ForeignKeyConstraint(
+        ['brand_id', 'sku'], 
+        ['product.brand_id', 'product.sku']))
+    
+    
+====================================
+product_table = Table(
+    'product', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('brand_id', Integer, ForeignKey('brand.id')),
+    Column('sku', Unicode(80)),
+    UniqueConstraint('brand_id', 'sku'))
+    
+    
+====================================
+payment_table = Table(
+    'payment', metadata,
+    Column('amount', Numeric(10,2), CheckConstraint('amount > 0')))
+    
+    
+====================================
+from datetime import datetime
+user_table = Table(
+    'tf_user', MetaData(),
+    Column('id', Integer, primary_key=True),
+    Column('user_name', Unicode(16), unique=True, nullable=False),
+    Column('password', Unicode(40), nullable=False),
+    Column('first_name', Unicode(255), default=''),
+    Column('last_name', Unicode(255), default=''),
+    Column('created_apptime', DateTime, default=datetime.now),
+    Column('created_dbtime', DateTime,
+          default=func.current_timestamp(),
+    Column('modified', DateTime, onupdate=datetime.now)))
+    
+    
+====================================
+from sqlalchemy import *
+from datetime import datetime
+
+user_table = Table(
+    'tf_user', MetaData(),
+    Column('id', Integer, primary_key=True),
+    Column('user_name', Unicode(16), unique=True, nullable=False),
+    Column('password', Unicode(40), nullable=False),
+    Column('first_name', Unicode(255), default=''),
+    Column('last_name', Unicode(255), default=''),
+    Column('created_apptime', DateTime, default=datetime.now),
+    Column('created_dbtime', DateTime, PassiveDefault('sysdate')),
+    Column('modified', DateTime, onupdate=datetime.now))
+    
+    
+====================================
+user_table = Table(
+    'tf_user', MetaData(),
+    Column('id', Integer, primary_key=True),
+Column('user_name', Unicode(16), unique=True, nullable=False,
+... index=True),
+    Column('password', Unicode(40), nullable=False),
+    Column('first_name', Unicode(255), default=''),
+    Column('last_name', Unicode(255), default='', index=True))
+    
+    
+====================================
+i = Index('idx_name', user_table.c.first_name,
+... user_table.c.last_name,
+          unique=True)
+    
+    
+====================================
+brand_table = Table(
+    'brand', metadata,
+Column('id', Integer, Sequence('brand_id_seq'), primary_key=True),
+    Column('name', Unicode(255), unique=True, nullable=False))
+    
+    
+====================================
+# Create a bound MetaData with an implicitly created engine
+bound_meta2 = MetaData('sqlite:///test2.db')
+
+# Create an engine and then a bound MetaData
+db2 = MetaData('sqlite:///test1.db')
+bound_meta1 = MetaData(db2)
+
+# Create an unbound MetaData
+unbound_meta = MetaData()
+
+# Create an Engine and bind the MetaData to it
+db1 = create_engine('sqlite://')
+unbound_meta.bind = db1
+    
+    
+====================================
+from sqlalchemy import *
+
+metadata = MetaData('sqlite://')
+
+user_table = Table(
+    'tf_user', metadata,
+    Column('id', Integer, primary_key=True),
+Column('user_name', Unicode(16), unique=True, nullable=False,
+... index=True),
+    Column('password', Unicode(40), nullable=False),
+    Column('first_name', Unicode(255), default=''),
+    Column('last_name', Unicode(255), default='', index=True))
+
+user_table.create()  # we can omit the bind parameter
+    
+    
+====================================
+meta1 = MetaData('postgres://postgres:password@localhost/test',
+... reflect=True)
+meta2 = MetaData('sqlite://')
+for table in meta1.table_iterator():
+    table.tometadata(meta2)
+meta2.create_all()
+    
+    
+==================

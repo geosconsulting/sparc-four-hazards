@@ -1,0 +1,558 @@
+chapter: Introduction to SQLAlchemy
+==================
+sql="INSERT INTO user(user_name, password) VALUES (%s, %s)"
+cursor = conn.cursor()
+cursor.execute(sql, ('rick', 'parrot'))
+    
+    
+====================================
+sql="INSERT INTO user(user_name, password) VALUES (:1, :2)"
+cursor = conn.cursor()
+cursor.execute(sql, 'rick', 'parrot')
+    
+    
+====================================
+sql="INSERT INTO user(user_name, password) VALUES ('%s', '%s')"
+cursor = conn.cursor()
+cursor.execute(sql % (user_name, password))
+    
+    
+====================================
+statement = user_table.insert(user_name='rick', password='parrot')
+statement.execute()
+    
+    
+====================================
+statement = user_table.select(and_(
+    user_table.c.created >= date(2007,1,1), 
+    user_table.c.created <  date(2008,1,1))
+result = statement.execute()
+    
+    
+====================================
+metadata=MetaData('sqlite://') # use an in-memory SQLite database
+user_table = Table(
+    'tf_user', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('user_name', Unicode(16), unique=True, nullable=False),
+Column('email_address', Unicode(255), unique=True, nullable=False),
+    Column('password', Unicode(40), nullable=False),
+    Column('first_name', Unicode(255), default=''),
+    Column('last_name', Unicode(255), default=''),
+    Column('created', DateTime, default=datetime.now))
+    
+    
+====================================
+users_table = Table('users', metadata, autoload=True)
+    
+    
+====================================
+class User(object): pass
+mapper(User, user_table)
+    
+    
+====================================
+CREATE TABLE tf_user (
+        id INTEGER NOT NULL, 
+        user_name VARCHAR(16) NOT NULL, 
+        email_address VARCHAR(255) NOT NULL, 
+        password VARCHAR(40) NOT NULL, 
+        first_name VARCHAR(255), 
+        last_name VARCHAR(255), 
+        created TIMESTAMP, 
+        PRIMARY KEY (id), 
+         UNIQUE (user_name), 
+         UNIQUE (email_address));
+CREATE TABLE tf_group (
+        id INTEGER NOT NULL, 
+        group_name VARCHAR(16) NOT NULL, 
+        PRIMARY KEY (id), 
+         UNIQUE (group_name));
+CREATE TABLE tf_permission (
+        id INTEGER NOT NULL, 
+        permission_name VARCHAR(16) NOT NULL, 
+        PRIMARY KEY (id), 
+         UNIQUE (permission_name));
+-- Relate the user and group tables
+CREATE TABLE user_group (
+        user_id INTEGER, 
+        group_id INTEGER, 
+	 PRIMARY KEY(user_id, group_id),
+         FOREIGN KEY(user_id) REFERENCES tf_user (id), 
+         FOREIGN KEY(group_id) REFERENCES tf_group (id));
+-- Relate the group and permission tables
+CREATE TABLE group_permission (
+        group_id INTEGER, 
+        permission_id INTEGER, 
+	 PRIMARY KEY(group_id, permission_id),
+         FOREIGN KEY(group_id) REFERENCES tf_group (id), 
+         FOREIGN KEY(permission_id) REFERENCES tf_permission (id));
+    
+    
+====================================
+SELECT COUNT(*) FROM tf_user, tf_group, tf_permission WHERE
+	  tf_user.user_name='rick' AND tf_user.id=user_group.user_id
+	  AND user_group.group_id = group_permission.group_id
+	  AND group_permission.permission_id = tf_permission.id
+	  AND permission_name='admin';
+    
+    
+====================================
+class User(object):
+    groups=[]
+
+class Group(object):
+    users=[]
+    permissions=[]
+
+class Permission(object):
+    groups=[]
+    
+    
+====================================
+print 'Summary for %s' % user.user_name
+for g in user.groups:
+    print '  Member of group %s' % g.group_name
+    for p in g.permissions:
+        print '    ... which has permission %s' % p.permission_name
+    
+    
+====================================
+def user_has_permission(user, permission_name):
+    for g in user.groups:
+        for p in g.permissions:
+            if p.permission_name == 'admin':
+                return True
+    return False
+    
+    
+====================================
+mapper(User, user_table, properties=dict(
+    groups=relation(Group, secondary=user_group, backref='users')))
+mapper(Group, group_table, properties=dict(
+    permissions=relation(Permission, secondary=group_permission, 
+                         backref='groups')))
+mapper(Permission, permission_table)
+    
+    
+====================================
+q = session.query(Permission)
+rick_is_admin = q.count_by(permission_name='admin',
+... user_name='rick')
+    
+    
+====================================
+SELECT count(tf_permission.id) 
+FROM tf_permission, tf_user, group_permission, tf_group, user_group 
+WHERE (tf_user.user_name = ? 
+	  AND ((tf_permission.id = group_permission.permission_id 
+	  AND tf_group.id = group_permission.group_id) 
+	  AND (tf_group.id = user_group.group_id 
+	  AND tf_user.id = user_group.user_id))) 
+	  AND (tf_permission.permission_name = ?)
+    
+    
+====================================
+for p in permissions:
+    users = set()
+    for g in p.groups:
+        for u in g.users:
+            users.add(u)
+print 'Permission %s has %d users' % (p.permission_name, len(users))
+    
+    
+====================================
+q=select([Permission.c.permission_name, 
+          func.count(user_group.c.user_id)],
+         and_(Permission.c.id==group_permission.c.permission_id,
+              Group.c.id==group_permission.c.group_id,
+              Group.c.id==user_group.c.group_id),
+         group_by=[Permission.c.permission_name],
+         distinct=True)
+rs=q.execute()
+for permission_name, num_users in q.execute():
+print 'Permission %s has %d users' % (permission_name, num_users)
+    
+    
+====================================
+class User(object):
+
+    def __init__(self, user_name=None, password=None, groups=None):
+        if groups is None: groups = []
+        self.user_name = user_name
+        self.password = password
+        self._groups = groups
+
+    def join_group(self, group):
+        self._groups.append(group)
+
+    def leave_group(self, group):
+        self._groups.remove(group)
+
+class Group(object):
+
+def __init__(self, group_name=None, users=None, permissions=None):
+        if users is None: users = []
+        if permissions is None: permissions = []
+        self.group_name = group_name
+        self._users = users
+        self._permissions = permissions
+
+    def add_user(self, user):
+        self._users.append(user)
+
+    def del_user(self, user):
+        self._users.remove(user)
+
+    def add_permission(self, permission):
+        self._permissions.append(permission)
+
+    def del_permission(self, permission):
+        self._permissions.remove(permission)
+
+class Permission(object):
+
+    def __init__(self, permission_name=None, groups=None):
+        self.permission_name = permission_name
+        self._groups = groups
+
+    def join_group(self, group):
+        self._groups.append(group)
+
+    def leave_group(self, group):
+        self._groups.remove(group)
+    
+    
+====================================
+user_table = Table(
+    'tf_user', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('user_name', Unicode(16), unique=True, nullable=False),
+    Column('password', Unicode(40), nullable=False))
+
+group_table = Table(
+    'tf_group', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('group_name', Unicode(16), unique=True, nullable=False))
+
+permission_table = Table(
+    'tf_permission', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('permission_name', Unicode(16), unique=True, 
+           nullable=False))
+
+user_group = Table(
+    'user_group',  metadata,
+    Column('user_id', None, ForeignKey('tf_user.id'), 
+           primary_key=True),
+    Column('group_id', None, ForeignKey('tf_group.id'), 
+           primary_key=True))
+
+group_permission = Table(
+    'group_permission',  metadata,
+    Column('group_id', None, ForeignKey('tf_group.id'), 
+           primary_key=True),
+    Column('permission_id', None, ForeignKey('tf_permission.id'), 
+           primary_key=True))
+    
+    
+====================================
+mapper(User, user_table, properties=dict(
+_groups=relation(Group, secondary=user_group, backref='_users')))
+mapper(Group, group_table, properties=dict(
+    _permissions=relation(Permission, secondary=group_permission, 
+                          backref=_'groups')))
+mapper(Permission, permission_table)
+    
+    
+====================================
+metadata=MetaData('sqlite://')
+engine = metadata.bind
+    
+    
+====================================
+engine=create_engine('sqlite://')
+    
+    
+====================================
+metadata.bind = engine
+    
+    
+====================================
+user_table.create(bind=engine)
+    
+    
+====================================
+for row in engine.execute("select user_name from tf_user"):
+    print 'user name: %s' % row['user_name']
+    
+    
+====================================
+engine = create_engine('sqlite://')
+connection = engine.connect()
+result = connection.execute("select user_name from tf_user")
+for row in result:
+    print 'user name: %s' % row['user_name']
+result.close()
+    
+    
+====================================
+engine = create_engine('sqlite://', strategy='threadlocal')
+    
+    
+====================================
+from sqlalchemy.databases.mysql import MSEnum, MSBigInteger
+
+user_table = Table('tf_user', meta,
+    Column('id', MSBigInteger),
+Column('honorific', MSEnum('Mr', 'Mrs', 'Ms', 'Miss', 'Dr',
+... 'Prof')))
+    
+    
+====================================
+# create an unbound MetaData
+unbound_meta = MetaData()
+
+# create an Engine and bind the MetaData to it
+db1 = create_engine('sqlite://')
+unbound_meta.bind = db1
+
+# Create an engine and then a bound MetaData
+db2 = MetaData('sqlite:///test1.db')
+bound_meta1 = MetaData(db2)
+
+# Create a bound MetaData with an implicitly created engine
+bound_meta2 = MetaData('sqlite:///test2.db')
+    
+    
+====================================
+# Create a bound MetaData
+meta = MetaData('sqlite://')
+
+# Define a couple of tables
+user_table = Table(
+    'tf_user', meta,
+    Column('id', Integer, primary_key=True),
+    Column('user_name', Unicode(16), unique=True, nullable=False),
+    Column('password', Unicode(40), nullable=False))
+
+group_table = Table(
+    'tf_group', meta,
+    Column('id', Integer, primary_key=True),
+    Column('group_name', Unicode(16), unique=True, nullable=False))
+
+# Create all the tables in the (empty) database
+meta.create_all()
+
+# Select all the groups from the tf_group table
+result_set = group_table.select().execute()
+    
+    
+====================================
+meta = MetaData()
+engine1 = create_engine('sqlite:///test1.db')
+engine2 = create_engine('sqlite:///test2.db')
+
+# Use the engine parameter to load tables from the first engine
+user_table = Table(
+    'tf_user', meta, autoload=True, autoload_with=engine1)
+group_table = Table(
+    'tf_group', meta, autoload=True, autoload_with=engine1)
+permission_table = Table(
+    'tf_permission', meta, autoload=True, autoload_with=engine1)
+user_group_table = Table(
+    'user_group', meta, autoload=True, autoload_with=engine1)
+group_permission_table = Table(
+    'group_permission', meta, autoload=True, autoload_with=engine1)
+
+# Create the tables in the second engine
+meta.create_all(engine2)
+
+# Select some data
+result_set = engine1.execute(user_table.select())
+    
+    
+====================================
+class ImageType(sqlalchemy.types.Binary):
+
+    def convert_bind_param(self, value, engine):
+        sfp = StringIO()
+        value.save(sfp, 'JPEG')
+        return sfp.getvalue()
+    
+    def convert_result_value(self, value, engine):
+        sfp = StringIO(value)
+        image = PIL.Image.open(sfp)
+        return image
+    
+    
+====================================
+select([user_table.c.user_name, user_table.c.password],
+       where=user_table.c.user_name=='rick')
+    
+    
+====================================
+SELECT tf_user.user_name, tf_user.password 
+FROM tf_user 
+WHERE tf_user.user_name = ?
+    
+    
+====================================
+# Select all users with a username starting with 'r' who were 
+#    created before June 1, 2007
+q = user_table.select(
+    user_table.c.user_name.like('r%') 
+    & user_table.c.created < datetime(2007,6,1))
+
+# Alternate syntax to do the same thing
+q = user_table.select(and_(
+    user_table.c.user_name.like('r%'),
+    user_table.c.created < datetime(2007,6,1)))
+    
+    
+====================================
+q = session.query(User)
+q = q.filter(User.c.user_name.like('r%') 
+             & User.c.created > datetime(2007,6,1))
+    
+    
+====================================
+q = user_table.select("""tf_user.user_name LIKE 'r%'""")
+    
+    
+====================================
+q=select([Permission.c.permission_name, 
+          func.count(user_group.c.user_id)],
+         and_(Permission.c.id==group_permission.c.permission_id,
+              Group.c.id==group_permission.c.group_id,
+              Group.c.id==user_group.c.group_id),
+         group_by=[Permission.c.permission_name],
+         distinct=True)
+    
+    
+====================================
+user_table = Table(
+    'tf_user', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('user_name', Unicode(16), unique=True, nullable=False),
+Column('email_address', Unicode(255), unique=True, nullable=False),
+    Column('password', Unicode(40), nullable=False),
+    Column('first_name', Unicode(255), default=''),
+    Column('last_name', Unicode(255), default=''),
+    Column('created', DateTime, default=datetime.now))
+
+group_table = Table(
+    'tf_group', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('group_name', Unicode(16), unique=True, nullable=False))
+
+user_group = Table(
+    'user_group',  metadata,
+Column('user_id', None, ForeignKey('tf_user.id'), primary_key=True),
+Column('group_id', None, ForeignKey('tf_group.id'),
+... primary_key=True))
+
+class User(object): pass
+
+class Group(object): pass
+
+mapper(User, user_table)
+mapper(Group, group_table)
+    
+    
+====================================
+import sha
+class User(object):
+
+    def _get_password(self):
+        return self._password
+    def _set_password(self, value):
+        self._password = sha.new(value).hexdigest()
+    password=property(_get_password, _set_password)
+
+    def password_matches(self, password):
+        return sha.new(password).hexdigest() == self._password
+
+mapper(User, user_table, properties=dict(
+    _password=user_table.c.password))
+    
+    
+====================================
+mapper(User, user_table, properties=dict(
+    _password=user_table.c.password,
+    groups=relation(Group, secondary=user_group, backref='users')))
+    
+    
+====================================
+# user1's "groups" property will automatically be updated
+group1.users.append(user1) 
+
+# group2's "users" property will automatically be updated
+user2.groups.append(group2)
+    
+    
+====================================
+Session=sessionmaker()
+session=Session()
+u = User()
+u.user_name='rick'
+u.password='foo'
+u.email_address='rick@pyatl.org'
+session.save(u) # tell SQLAlchemy to track the object
+session.flush() # actually perform the insert
+    
+    
+====================================
+q = session.query(User)
+
+user = q.get(1) # retrieve by primary key
+
+# retrieve one object by property
+user = q.get_by(user_name='rick') 
+
+# retrieve multiple objects
+users = list(q.filter_by(first_name=None))
+
+# retrieve multiple objects using the SQL expression language
+users = list(q.filter(User.c.first_name==None))
+    
+    
+====================================
+# Retrieve all users in a group named 'admin'
+users = list(q.filter_by(group_name='admin'))
+    
+    
+====================================
+q = session.query(User)
+q = q.join('groups') # use the mapped property name for joins
+q = q.filter(Group.c.group_name=='admin')
+users = list(q)
+    
+    
+====================================
+q = session.query(User)
+# groups is a property of a User, permissions is a property of a
+... Group
+q = q.join(['groups', 'permissions']) 
+q = q.filter(Permission.c.permission_name=='admin')
+users = list(q)
+    
+    
+====================================
+SELECT tf_user.first_name AS tf_user_first_name, 
+    tf_user.last_name AS tf_user_last_name, 
+    tf_user.created AS tf_user_created, 
+    tf_user.user_name AS tf_user_user_name, 
+    tf_user.password AS tf_user_password, 
+    tf_user.email_address AS tf_user_email_address, 
+    tf_user.id AS tf_user_id 
+FROM tf_user 
+    JOIN user_group ON tf_user.id = user_group.user_id 
+    JOIN tf_group ON tf_group.id = user_group.group_id 
+JOIN group_permission ON tf_group.id = group_permission.group_id 
+JOIN tf_permission ON tf_permission.id =
+... group_permission.permission_id 
+WHERE tf_permission.permission_name = ? ORDER BY tf_user.oid
+    
+    
+==================

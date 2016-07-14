@@ -1,0 +1,59 @@
+chapter: SQLAlchemy Type Engines
+==================
+test_table3 = Table(
+    'test3', metadata,
+    Column('c0', Numeric),
+    Column('c1', Numeric(4,6)),
+    Column('c3', String),
+    Column('c4', String(10)))
+    
+    
+====================================
+CREATE TABLE test3 (
+        c0 NUMERIC(10, 2), 
+        c1 NUMERIC(4, 6), 
+        c3 TEXT, 
+        c4 VARCHAR(10)
+)
+    
+    
+====================================
+from sqlalchemy import types
+
+class MyCustomEnum(types.TypeDecorator):
+
+    impl=types.Integer
+
+    def __init__(self, enum_values, *l, **kw):
+        types.TypeDecorator.__init__(self, *l, **kw)
+        self._enum_values = enum_values
+
+    def convert_bind_param(self, value, engine):
+        result = self.impl.convert_bind_param(value, engine)
+        if result not in self._enum_values:
+            raise TypeError, (
+"Value %s must be one of %s" % (result, self._enum_values))
+        return result
+
+    def convert_result_value(self, value, engine):
+        'Do nothing here'
+        return self.impl.convert_result_value(value, engine)
+    
+    
+====================================
+class NewType(types.TypeEngine):
+
+    def __init__(self, *args):
+        self._args = args
+
+    def get_col_spec(self):
+        return 'NEWTYPE(%s)' % ','.join(self._args)
+
+    def convert_bind_param(self, value, engine):
+        return value
+
+    def convert_result_value(self, value, engine):
+        return value
+    
+    
+==================

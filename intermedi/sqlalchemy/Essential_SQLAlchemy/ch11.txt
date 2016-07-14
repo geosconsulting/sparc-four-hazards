@@ -1,0 +1,124 @@
+chapter: Other SQLAlchemy Extensions
+==================
+user_table = Table(
+    'user', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('user_name', String(255), unique=True),
+    Column('password', String(255)))
+
+brand_table = Table(
+    'brand', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', String(255)))
+
+sales_rep_table = Table(
+    'sales_rep', metadata,
+Column('brand_id', None, ForeignKey('brand.id'), primary_key=True),
+Column('user_id', None, ForeignKey('user.id'), primary_key=True),
+    Column('commission_pct', Integer, default=0))
+    
+    
+====================================
+class User(object): pass
+class Brand(object): pass
+class SalesRep(object): pass
+
+mapper(User, user_table, properties=dict(
+    sales_rep=relation(SalesRep, backref='user', uselist=False)))
+mapper(Brand, brand_table, properties=dict(
+    sales_reps=relation(SalesRep, backref='brand')))
+mapper(SalesRep, sales_rep_table)
+    
+    
+====================================
+class Brand(object):
+    @property
+    def users(self):
+        return [ sr.user for sr in self.sales_reps ]
+    
+    
+====================================
+from sqlalchemy.ext.associationproxy import association_proxy
+
+class Brand(object):
+    users=association_proxy('sales_reps', 'user')
+    
+    
+====================================
+mapper(Brand, brand_table, properties=dict(
+    sales_reps=relation(SalesRep, backref='brand')))
+Brand.users=association_proxy('sales_reps', 'user')
+    
+    
+====================================
+class User(object):
+    def __init__(self, user_name=None, password=None):
+        self.user_name=user_name
+        self.password=password
+
+class Brand(object):
+    def __init__(self, name=None):
+        self.name = name
+
+class SalesRep(object):
+    def __init__(self, user=None, brand=None, commission_pct=0):
+        self.user = user
+        self.brand = brand
+        self.commission_pct=commission_pct
+    
+    
+====================================
+Brand.users=association_proxy(
+    'sales_reps', 'user',
+    creator=lambda u:SalesRep(user=u, commission_pct=10))
+    
+    
+====================================
+from sqlalchemy.orm.collections import attribute_mapped_collection
+
+reps_by_user_class=attribute_mapped_collection('user')
+
+mapper(Brand, brand_table, properties=dict(
+    sales_reps_by_user=relation(
+        SalesRep, backref='brand',
+        collection_class=reps_by_user_class)))
+Brand.commissions=association_proxy(
+    'sales_reps_by_user', 'commission_pct',
+creator=lambda key,value: SalesRep(user=key, commission_pct=value))
+    
+    
+====================================
+todo_list_table = Table(
+    'todo_list', metadata,
+    Column('name', Unicode(255), primary_key=True))
+
+todo_item_table = Table(
+    'todo_item', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('list_name', None, ForeignKey('todo_list.name')),
+    Column('list_position', Integer),
+    Column('value', Unicode))
+    
+    
+====================================
+class TodoList(object):
+    def __init__(self, name):
+        self.name = name
+    def __repr__(self):
+        return '<TodoList %s>' % self.name
+
+class TodoItem(object):
+    def __init__(self, value, position=None):
+        self.value = value
+        self.list_position = position
+    def __repr__(self):
+        return '<%s: %s>' % (self.list_position, self.value)
+
+mapper(TodoList, todo_list, properties=dict(
+    items=relation(TodoItem,
+                   backref='list',
+                   order_by=[todo_item_table.c.list_position])))
+mapper(TodoItem, todo_item)
+    
+    
+==================

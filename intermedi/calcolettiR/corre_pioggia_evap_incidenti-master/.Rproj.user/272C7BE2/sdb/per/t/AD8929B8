@@ -1,0 +1,25 @@
+{
+    "contents" : "",
+    "created" : 1468403823020.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "AD8929B8",
+    "lastKnownWriteTime" : 578055781,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "re9jhgpxye",
+        "caption" : "dati_fao",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=dati_fao&cache_key=re9jhgpxye",
+        "displayedObservations" : 12,
+        "environment" : "",
+        "object" : "dati_fao",
+        "totalObservations" : 12,
+        "variables" : 9
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "type" : "r_dataframe"
+}

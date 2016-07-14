@@ -1,0 +1,441 @@
+chapter: Building an Object Mapper
+==================
+level_table = Table(
+    'level', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('parent_id', None, ForeignKey('level.id')),
+    Column('name', String(20)))
+category_table = Table(
+    'category', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('level_id', None, ForeignKey('level.id')),
+    Column('parent_id', None, ForeignKey('category.id')),
+    Column('name', String(20)))
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True), 
+    Column('msrp', Numeric))
+product_summary_table = Table(
+    'product_summary', metadata,
+    Column('sku', None, ForeignKey('product.sku'), primary_key=True),
+    Column('name', Unicode(255)),
+    Column('description', Unicode))
+product_category_table = Table(
+    'product_category', metadata,
+    Column('product_id', None, ForeignKey('product.sku'), primary_key=True),
+    Column('category_id', None, ForeignKey('category.id'), primary_key=True))
+region_table = Table(
+    'region', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', Unicode(255)))
+store_table = Table(
+    'store', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('region_id', None, ForeignKey('region.id')),
+    Column('name', Unicode(255)))
+product_price_table = Table(
+    'product_price', metadata,
+    Column('sku', None, ForeignKey('product.sku'), primary_key=True),
+    Column('store_id', None, ForeignKey('store.id'), primary_key=True),
+    Column('price', Numeric, default=0))
+    
+    
+====================================
+class Level(object):
+
+    def __init__(self, name, parent=None):
+        self.name = name
+        self.parent = parent
+
+    def __repr__(self):
+        return '<Level %s>' % self.name
+
+class Category(object):
+
+    def __init__(self, name, level, parent=None):
+        self.name = name
+        self.level = level
+        self.parent = parent
+
+    def __repr__(self):
+        return '<Category %s.%s>' % (self.level.name, self.name)
+
+class Product(object):
+
+    def __init__(self, sku, msrp, summary=None):
+        self.sku = sku
+        self.msrp = msrp
+        self.summary = summary
+        self.categories = []
+        self.prices = []
+
+    def __repr__(self):
+        return '<Product %s>' % self.sku
+
+class ProductSummary(object):
+
+    def __init__(self, name, description):
+        self.name = name
+        self.description = description
+
+    def __repr__(self):
+        return '<ProductSummary %s>' % self.name
+
+class Region(object):
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return '<Region %s>' % self.name
+
+class Store(object):
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return '<Store %s>' % self.name
+
+class Price(object):
+
+    def __init__(self, product, store, price):
+        self.product = product
+        self.store = store
+        self.price = price
+
+    def __repr__(self):
+        return '<Price %s at %s for $%.2f>' % (
+            self.product.sku, self.store.name, self.price)
+    
+    
+====================================
+segment_table = Table(
+    'segment', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('lat0', Float),
+    Column('long0', Float),
+    Column('lat1', Float),
+    Column('long1', Float))
+    
+    
+====================================
+class RouteSegment(object):
+    def __init__(self, begin, end):
+        self.begin = begin
+        self.end = end
+    def __repr__(self):
+        return '<Route %s to %s>' % (self.begin, self.end)
+
+class MapPoint(object):
+    def __init__(self, lat, long):
+        self.coords = lat, long
+    def __composite_values__(self):
+        return self.coords
+    def __eq__(self, other):
+        return self.coords == other.coords
+    def __ne__(self, other):
+        return self.coords != other.coords
+    def __repr__(self):
+        return '(%s lat, %s long)' % self.coords
+    
+    
+====================================
+class MapPointComparator(PropComparator):
+    def __lt__(self, other):
+        return and_(*[a<b for a, b in
+                      zip(self.prop.columns,
+                          other.__composite_values__())])
+
+mapper(RouteSegment, segment_table, properties=dict(
+    begin=composite(MapPoint,
+                    segment_table.c.lat0, segment_table.c.long0,
+                    comparator=MapPointComparator),
+    end=composite(MapPoint,
+                  segment_table.c.lat1, segment_table.c.long1,
+                  comparator=MapPointComparator)))
+    
+    
+====================================
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True), 
+    Column('msrp', Numeric),
+    Column('image', BLOB))
+    
+    
+====================================
+mapper(Product, product_table, properties=dict(
+    image=deferred(product_table.c.image)))
+    
+    
+====================================
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True), 
+    Column('msrp', Numeric),
+    Column('image1', Binary),
+    Column('image2', Binary),
+    Column('image3', Binary))
+
+mapper(Product, product_table, properties=dict(
+    image1=deferred(product_table.c.image, group='images'),
+    image2=deferred(product_table.c.image, group='images'),
+    image3=deferred(product_table.c.image, group='images')))
+    
+    
+====================================
+q = product_table.join(
+    product_summary_table,
+product_table.c.sku==product_summary_table.c.sku).alias('full_product')
+
+class FullProduct(object): pass
+
+mapper(FullProduct, q)
+    
+    
+====================================
+mapper(Region, region_table, properties=dict(
+    stores=relation(Store,
+                    primaryjoin=(store_table.c.region_id
+                                 ==region_table.c.id))))
+    
+    
+====================================
+category_table = Table(
+    'category', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('level_id', None, ForeignKey('level.id')),
+    Column('parent_id', None, ForeignKey('category.id')),
+    Column('name', String(20)))
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True), 
+    Column('msrp', Numeric))
+product_category_table = Table(
+    'product_category', metadata,
+Column('product_id', None, ForeignKey('product.sku'),
+... primary_key=True),
+Column('category_id', None, ForeignKey('category.id'),
+... primary_key=True))
+    
+    
+====================================
+mapper(Category, category_table, properties=dict(
+    products=relation(Product, secondary=product_category_table,
+primaryjoin=(product_category_table.c.category_id
+                                   == category_table.c.id),
+secondaryjoin=(product_category_table.c.product_id
+                                     == product_table.c.sku))))
+mapper(Product, product_table, properties=dict(
+    categories=relation(Category, secondary=product_category_table,
+primaryjoin=(product_category_table.c.product_id
+                                     == product_table.c.sku),
+secondaryjoin=(product_category_table.c.category_id
+                                       == category_table.c.id))))
+    
+    
+====================================
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True), 
+    Column('msrp', Numeric))
+product_summary_table = Table(
+    'product_summary', metadata,
+Column('sku', None, ForeignKey('product.sku'), primary_key=True),
+    Column('name', Unicode(255)),
+    Column('description', Unicode))
+    
+    
+====================================
+mapper(ProductSummary, product_summary_table, properties=dict(
+    product=relation(Product, 
+                     backref=backref('summary', uselist=False))))
+mapper(Product, product_table)
+    
+    
+====================================
+level_table = Table(
+    'level', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('parent_id', None, ForeignKey('level.id')),
+    Column('name', String(20)))
+    
+    
+====================================
+mapper(Level, level_table, properties=dict(
+    children=relation(Level)))
+    
+    
+====================================
+mapper(Level, level_table, properties=dict(
+    parent=relation(Level, remote_side=[level_table.c.parent_id],
+                    backref='children')))
+    
+    
+====================================
+mapper(Region, region_table, properties=dict(
+    stores=relation(Store)))
+    
+    
+====================================
+mapper(Region, region_table, properties=dict(
+    stores=relation(Store, collection_class=set)))
+    
+    
+====================================
+class SetAndListLike(object):
+    __emulates__ = set
+    def __init__(self):
+        self._c = set()
+    def append(self, o):
+        self._c.add(o)
+    def remove(self, o):
+        self._c.remove(o)
+    def __iter__(self):
+        return iter(self._c)
+    
+    
+====================================
+from sqlalchemy.orm.collections import collection
+
+class SetAndListLike(object):
+    __emulates__ = set
+    def __init__(self):
+        self._c = set()
+    @collection.appender
+    def append(self, o):
+        self._c.add(o)
+    def remove(self, o):
+        self._c.remove(o)
+    def __iter__(self):
+        return iter(self._c)
+    
+    
+====================================
+mapper(Region, region_table, properties=dict(
+    stores=relation(Store,
+collection_class=column_mapped_collection(store_table.c.name)))
+    
+    
+====================================
+mapper(Region, region_table, properties=dict(
+    stores=relation(Store,
+collection_class=attribute_mapped_collection('name')))
+    
+    
+====================================
+engine1 = create_engine('sqlite://')
+engine2 = create_engine('sqlite://')
+
+metadata = MetaData()
+
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True), 
+    Column('msrp', Numeric))
+product_summary_table = Table(
+    'product_summary', metadata,
+Column('sku', None, ForeignKey('product.sku'), primary_key=True),
+    Column('name', Unicode(255)),
+    Column('description', Unicode))
+
+product_table.create(bind=engine1)
+product_summary_table.create(bind=engine2)
+
+stmt = product_table.insert()
+engine1.execute(
+    stmt,
+    [dict(sku="123", msrp=12.34),
+     dict(sku="456", msrp=22.12),
+     dict(sku="789", msrp=41.44)])
+stmt = product_summary_table.insert()
+engine2.execute(
+    stmt,
+    [dict(sku="123", name="Shoes", description="Some Shoes"),
+     dict(sku="456", name="Pants", description="Some Pants"),
+     dict(sku="789", name="Shirts", description="Some Shirts")])
+    
+    
+====================================
+class Product(object):
+    def __init__(self, sku, msrp, summary=None):
+        self.sku = sku
+        self.msrp = msrp
+        self.summary = summary
+    def __repr__(self):
+        return '<Product %s>' % self.sku
+
+class ProductSummary(object):
+    def __init__(self, name, description):
+        self.name = name
+        self.description = description
+    def __repr__(self):
+        return '<ProductSummary %s>' % self.name
+
+clear_mappers()
+mapper(ProductSummary, product_summary_table, properties=dict(
+    product=relation(Product, 
+                     backref=backref('summary', uselist=False))))
+mapper(Product, product_table)
+    
+    
+====================================
+Session = sessionmaker(class_=ShardedSession)
+    
+    
+====================================
+engine1 = create_engine('sqlite://')
+engine2 = create_engine('sqlite://')
+
+metadata = MetaData()
+
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True), 
+    Column('msrp', Numeric))
+metadata.create_all(bind=engine1)
+metadata.create_all(bind=engine2)
+
+class Product(object):
+    def __init__(self, sku, msrp):
+        self.sku = sku
+        self.msrp = msrp
+    def __repr__(self):
+        return '<Product %s>' % self.sku
+
+clear_mappers()
+product_mapper = mapper(Product, product_table)
+
+def shard_chooser(mapper, instance, clause=None):
+    if mapper is not product_mapper:
+        return 'odd'
+    if (instance.sku 
+        and instance.sku[0].isdigit() 
+        and int(instance.sku[0]) % 2 == 0):
+        return 'even'
+    else:
+        return 'odd'
+
+def id_chooser(query, ident):
+    if query.mapper is not product_mapper:
+        return ['odd']
+    if (ident \
+        and ident[0].isdigit() 
+        and int(ident[0]) % 2 == 0):
+        return ['even']
+    return ['odd']
+
+def query_chooser(query):
+    return ['even', 'odd']
+    
+Session = sessionmaker(class_=ShardedSession)
+session = Session(
+    shard_chooser=shard_chooser,
+    id_chooser=id_chooser,
+    query_chooser=query_chooser,
+    shards=dict(even=engine1,
+                odd=engine2))
+    
+    
+==================

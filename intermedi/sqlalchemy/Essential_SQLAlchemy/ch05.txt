@@ -1,0 +1,112 @@
+chapter: Running Queries and Updates
+==================
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True), 
+    Column('msrp', Numeric))
+store_table = Table(
+    'store', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', Unicode(255)))
+product_price_table = Table(
+    'product_price', metadata,
+    Column('sku', None, ForeignKey('product.sku'), primary_key=True),
+    Column('store_id', None, ForeignKey('store.id'), primary_key=True),
+    Column('price', Numeric, default=0))
+    
+    
+====================================
+product_table = Table(
+    'product', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('sku', String(20), unique=True),
+    Column('manufacturer', Unicode(255)),
+    Column('department', Unicode(255)),
+    Column('category', Unicode(255)),
+    Column('class', Unicode(255)),
+    Column('subclass', Unicode(255)))
+    
+    
+====================================
+def get_prods(manufacturer=None,
+              department=None,
+              category=None,
+              class_=None,
+              subclass=None,
+              offset=None,
+              limit=None):
+    where_parts = []
+    if manufacturer is not None:
+        where_parts.append(product_table.c.manufacturer
+                           == manufacturer)
+    if department is not None:
+        where_parts.append(product_table.c.department
+                           == department)
+    if category is not None:
+        where_parts.append(product_table.c.category
+                           == category)
+    if class_ is not None:
+        where_parts.append(product_table.c.class_
+                           == class_)
+    if subclass is not None:
+        where_parts.append(product_table.c.subclass
+                           == subclass)
+    whereclause=and_(*where_parts)
+    query = product_table.select(whereclause,
+                                 offset=offset, limit=limit)
+    return query
+    
+    
+====================================
+def get_prods(manufacturer=None,
+              department=None,
+              category=None,
+              class_=None,
+              subclass=None,
+              offset=None,
+              limit=None):
+    query = product_table.select()
+    if manufacturer is not None:
+        query = query.where(product_table.c.manufacturer
+                            == manufacturer)
+    if department is not None:
+        query = query.where(product_table.c.department
+                            == department)
+    if category is not None:
+        query = query.where(product_table.c.category
+                            == category)
+    if class_ is not None:
+        query = query.where(product_table.c.class_
+                            == class_)
+    if subclass is not None:
+        query = query.where(product_table.c.subclass
+                            == subclass)
+    query = query.offset(offset)
+    query = query.limit(limit)
+    return query
+    
+    
+====================================
+SELECT store.name 
+FROM store 
+    JOIN product_price ON store.id=product_price.store_id
+    JOIN product ON product_price.sku=product.sku
+WHERE product.msrp != product_price.price;
+    
+    
+====================================
+employee_table = Table(
+    'employee', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('manager', None, ForeignKey('employee.id')),
+    Column('name', String(255)))
+    
+    
+====================================
+SELECT employee.name
+FROM employee, employee AS manager
+WHERE employee.manager_id = manager.id
+    AND manager.name = 'Fred'
+    
+    
+==================

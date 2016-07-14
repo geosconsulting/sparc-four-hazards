@@ -1,0 +1,41 @@
+chapter: SqlSoup: An Automatic Mapper for SQLAlchemy
+==================
+from sqlalchemy import *
+
+engine = create_engine('sqlite:///chapter10.db')
+
+metadata = MetaData(engine)
+
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True), 
+    Column('msrp', Numeric))
+store_table = Table(
+    'store', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', Unicode(255)))
+product_price_table = Table(
+    'product_price', metadata,
+Column('sku', None, ForeignKey('product.sku'), primary_key=True),
+Column('store_id', None, ForeignKey('store.id'), primary_key=True),
+    Column('price', Numeric, default=0))
+
+metadata.create_all()
+
+stmt = product_table.insert()
+stmt.execute([dict(sku="123", msrp=12.34),
+              dict(sku="456", msrp=22.12),
+              dict(sku="789", msrp=41.44)])
+stmt = store_table.insert()
+stmt.execute([dict(name="Main Store"),
+              dict(name="Secondary Store")])
+stmt = product_price_table.insert()
+stmt.execute([dict(store_id=1, sku="123"),
+              dict(store_id=1, sku="456"),
+              dict(store_id=1, sku="789"),
+              dict(store_id=2, sku="123"),
+              dict(store_id=2, sku="456"),
+              dict(store_id=2, sku="789")])
+    
+    
+==================

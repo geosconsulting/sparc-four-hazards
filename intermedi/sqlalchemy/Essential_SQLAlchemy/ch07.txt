@@ -1,0 +1,140 @@
+chapter: Querying and Updating at the ORM
+  Level
+==================
+# Create a Session class with the default
+#    options
+Session = sessionmaker(bind=engine)
+
+# Create an unbound Session class
+Session = sessionmaker()
+
+# Bind the Session class once the engine
+#    is available
+Session.configure(bind=engine)
+    
+    
+====================================
+from sqlalchemy import *
+from sqlalchemy.orm import *
+
+engine = create_engine('sqlite://')
+metadata = MetaData(engine)
+
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True), 
+    Column('msrp', Numeric))
+
+class Product(object):
+    def __init__(self, sku, msrp, summary=None):
+        self.sku = sku
+        self.msrp = msrp
+        self.summary = summary
+        self.categories = []
+        self.prices = []
+    def __repr__(self):
+        return '<Product %s>' % self.sku
+
+mapper(Product, product_table)
+    
+    
+====================================
+level_table = Table(
+    'level', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('parent_id', None, ForeignKey('level.id')),
+    Column('name', String(20)))
+
+category_table = Table(
+    'category', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('level_id', None, ForeignKey('level.id')),
+    Column('parent_id', None, ForeignKey('category.id')),
+    Column('name', String(20)))
+
+product_category_table = Table(
+    'product_category', metadata,
+Column('product_id', None, ForeignKey('product.sku'),
+... primary_key=True),
+Column('category_id', None, ForeignKey('category.id'),
+... primary_key=True))
+
+class Product(object):
+    def __init__(self, sku, msrp, summary=None):
+        self.sku = sku
+        self.msrp = msrp
+        self.summary = summary
+        self.categories = []
+        self.prices = []
+    def __repr__(self):
+        return '<Product %s>' % self.sku
+
+class Level(object):
+    def __init__(self, name, parent=None):
+        self.name = name
+        self.parent = parent
+    def __repr__(self):
+        return '<Level %s>' % self.name
+
+class Category(object):
+    def __init__(self, name, level, parent=None):
+        self.name = name
+        self.level = level
+        self.parent = parent
+    def __repr__(self):
+        return '<Category %s.%s>' % (self.level.name, self.name)
+
+# Clear the mappers so we can re-map the Product class
+#    with an additional property
+clear_mappers()
+
+mapper(Product, product_table, properties=dict(
+    categories=relation(Category, secondary=product_category_table,
+                        backref='products')))
+
+mapper(Level, level_table, properties=dict(
+    children=relation(Level, backref='parent'),
+    categories=relation(Category, backref='level')))
+
+mapper(Category, category_table, properties=dict(
+    children=relation(Category, backref='parent')))
+    
+    
+====================================
+account_table = Table(
+    'account', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('balance', Numeric))
+
+class Account(object): pass
+
+mapper(Account, account_table)
+    
+    
+====================================
+mapper(Product, product_table, properties=dict(
+    categories=relation(Category, secondary=product_category_table,
+                        backref='products')))
+
+mapper(Level, level_table, properties=dict(
+    children=relation(Level, backref='parent'),
+    categories=relation(Category, backref='level')))
+
+mapper(Category, category_table, properties=dict(
+    children=relation(Category, backref='parent')))
+    
+    
+====================================
+Session.mapper(Product, product_table, properties=dict(
+    categories=relation(Category, secondary=product_category_table,
+                        backref='products')))
+
+Session.mapper(Level, level_table, properties=dict(
+    children=relation(Level, backref='parent'),
+    categories=relation(Category, backref='level')))
+
+Session.mapper(Category, category_table, properties=dict(
+    children=relation(Category, backref='parent')))
+    
+    
+==================

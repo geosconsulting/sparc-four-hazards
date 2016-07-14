@@ -21,6 +21,7 @@ class LandslideIncidentiPrecipitazione(object):
 
         # DATI NASA
         self.LANDSLIDES_GLC = "glc_attribs"
+        self.LANDSLIDES_GLC_SPARC = "glc20160114_wfp"
         self.SCHEMA_NASA = "nasa"
         self.RAIN_TRMM = 'trmm_' + str(self.ISO).lower() + '_0115'
 
@@ -51,12 +52,7 @@ class LandslideIncidentiPrecipitazione(object):
             print "Connection failed"
 
         return lista_valori_mensili_pioggia
-
-class LandslideIncidentiPrecipitazioneAdmin2(LandslideIncidentiPrecipitazione):
-
-    def __init__(self, iso_sub):
-        super(LandslideIncidentiPrecipitazioneAdmin2,self).__init__(iso_sub)
-
+        
     def nasaEvents(self):
 
         try:
@@ -121,6 +117,11 @@ class LandslideIncidentiPrecipitazioneAdmin2(LandslideIncidentiPrecipitazione):
 
         return df_emdat, conteggio_dict
 
+class LandslideIncidentiPrecipitazioneAdmin2(LandslideIncidentiPrecipitazione):
+
+    def __init__(self, iso_sub):
+        super(LandslideIncidentiPrecipitazioneAdmin2,self).__init__(iso_sub)
+    
     def faoPrecipitation(self):
 
         try:
@@ -238,6 +239,7 @@ class LandslideIncidentiPrecipitazioneAdmin2(LandslideIncidentiPrecipitazione):
         associazione_pioggia_frane_normalizzata['mm_norm'].plot(
             label='CHIRPS/FAO',
             color='red')
+
         associazione_pioggia_frane_normalizzata['eventi_norm'].plot(
             label='NASA',
             kind="bar",
@@ -247,10 +249,10 @@ class LandslideIncidentiPrecipitazioneAdmin2(LandslideIncidentiPrecipitazione):
         plt.title(adm_name)
         plt.show()
 
-class LandslideIncidetiPrecipitazioneNazionale(LandslideIncidentiPrecipitazione):
+class LandslideIncidentiPrecipitazioneNazionale(LandslideIncidentiPrecipitazione):
 
     def __init__(self, iso_sub):
-        super(LandslideIncidentiPrecipitazioneAdmin2, self).__init__(iso_sub)
+        super(LandslideIncidentiPrecipitazioneNazionale, self).__init__(iso_sub)
 
     def trmmPrecipitationByCountry(self):
 
@@ -324,56 +326,41 @@ class LandslideIncidetiPrecipitazioneNazionale(LandslideIncidentiPrecipitazione)
 
         df_rain_events['d3_n'].plot(label='3 days', color='red')
         df_rain_events['d5_n'].plot(label='5 days', color='orange')
-        df_rain_events['d15_n'].plot(label='15 days', color='darkmagenta')
+#         df_rain_events['d15_n'].plot(label='15 days', color='darkmagenta')
         df_rain_events['ev_n'].plot(label='Events', kind="bar", color='green')
 
         plt.legend()
         plt.title(self.paese_nome)
         plt.show()
 
-        #mesi_sopra_3gg_grp.plot(label='3 days', color='red')
-        #mesi_sopra_5gg_grp.plot(label='5 days', color='orange')
-        #mesi_sopra_15gg_grp.plot(label='15 days')
-        #glcs_country_grp.plot(label="Events", kind="bar", color='green')
-
         return df_rain_events
 
-    def data_fetching(self, table_name, schema):
+    def data_fetching(self):
 
         engine_in = create_engine(r'postgresql://geonode:geonode@' + self.IP_IN + '/geonode-imports')
 
         try:
-            df_in_sql = pd.read_sql_table(table_name, engine_in, schema=schema, index_col='id', parse_dates={'date': '%Y-%m-%d'})
+            df_in_sql = pd.read_sql_table(self.LANDSLIDES_GLC_SPARC, engine_in, schema=self.SCHEMA_NASA, index_col='id', parse_dates={'date': '%Y-%m-%d'})
         except Exception as e:
             print e.message
 
         return df_in_sql
 
-    def data_cleaning(self,df,iso):
+    def data_cleaning(self,df):
 
         df['month'] = df['date'].dt.month
         df['year'] = df['date'].dt.year
-        tabella_lavoro = df[df['iso3'] == iso]
+        tabella_lavoro = df[df['iso3'] == self.ISO]
+
         return tabella_lavoro
 
-    # def main(self,iso):
-    #
-    #       # ip_in = '127.0.0.1'
-    #       # table = 'glc20160114_wfp'
-    #       # schema = "nasa"
-    #       # iso = iso
-    #       la_tabella = self.data_fetching(ip_in, table, schema)
-    #       tabella_aggiustata = data_cleaning(la_tabella, iso)
-    #       incidenti_per_meseSerie = tabella_aggiustata.groupby(['rcl_type','month'])['month'].count()
-    #       incidenti_per_meseDataFrame = tabella_aggiustata.groupby(['rcl_type','month']).count()
-    #       #print incidenti_per_meseSerie
-    #       solo_landslides = incidenti_per_meseDataFrame.loc['Landslide','iso3']
-    #       plt.plot(solo_landslides)
-    #       plt.title('NASA Registered Landslides')
-    #       plt.show()
-
-
-
-
-
-
+    def data_analysis_vizualization(self,tabella_aggiustata):
+           
+        incidenti_per_meseSerie = tabella_aggiustata.groupby(['rcl_type','month'])['month'].count()
+        incidenti_per_meseDataFrame = tabella_aggiustata.groupby(['rcl_type','month']).count()
+        
+        solo_landslides = incidenti_per_meseDataFrame.loc['Landslide','iso3']
+          
+        plt.plot(solo_landslides)
+        plt.title('NASA Registered Landslides')
+        plt.show()

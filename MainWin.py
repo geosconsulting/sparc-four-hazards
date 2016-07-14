@@ -5,7 +5,7 @@ import CompleteProcessingLandslide as completeLandslide
 # import Correlation_GLCFAO
 import CorrelazioneIncidentiPrecipitazioneLandslide as CIP
 import FloodDataManualUpload as fdup
-import glc_splitMese
+from intermedi.interfaces_discontinued import glc_splitMese
 
 from Tkinter import *
 import tkMessageBox
@@ -99,20 +99,19 @@ class AppSPARC:
         self.button_landslide_upload = Button(finestra,
                                               text="Upload Data Manually",
                                               fg="black",
-                                              command=self.landslide_upload)
+                                              command=self.landslide_iso_cleaning)
         self.button_landslide_upload.place(x=310, y=215, width=130, height=25)
 
         self.button_landslide_upload = Button(finestra,
                                               text="Monthly Adm2",
                                               fg="black",
-                                              command=self.landslide_adm2_correlate)
+                                              command=self.landslide_adm2)
         self.button_landslide_upload.place(x=310, y=245, width=130, height=25)
 
         self.button_landslide_upload = Button(finestra,
                                               text="National Assessment",
                                               fg="black",
-                                              command=self.landslide_national)
-
+                                              command=self.landslide_adm0)
         self.button_landslide_upload.place(x=310, y=275, width=130, height=25)
 
         self.button_landslide_upload = Button(finestra,
@@ -346,41 +345,41 @@ class AppSPARC:
         db_conn_landslide.close_connection()
         self.area_messaggi.insert(INSERT, "Data for " + paese + " Uploaded in DB\n")
 
-    def landslide_upload(self):
-        self.box_value_adm0.get()
+    def landslide_iso_cleaning(self,nome_paese):
+        
+       
+        if nome_paese == "Bolivia":
+            nome_paese = "Bolivia, Plurinational State of"
+        elif nome_paese == "Democratic Republic of the Congo":
+            nome_paese = "Congo, The Democratic Republic of the"
+        elif nome_paese == "Iran":
+            nome_paese = "Iran, Islamic Republic of"
+        elif nome_paese == "Ivory Coast":
+            nome_paese = u"Côte d'Ivoire"
+        elif nome_paese == "Lao PDR":
+            nome_paese = "Lao People's Democratic Republic"
+        elif nome_paese == "Lao PDR":
+            nome_paese = "Lao People's Democratic Republic"
+        elif nome_paese == "Sao Tome and Principe":
+            nome_paese = "Sao Tome and Principe"
+        elif nome_paese == "Syria":
+            nome_paese = "Syrian Arab Republic"
+        elif nome_paese == "Tanzania":
+            nome_paese = "Tanzania, United Republic of"
 
-    def landslide_adm2_correlate(self):
+        iso3 = pycountry.countries.get(name=nome_paese).alpha3
+        
+        return iso3
+
+    def landslide_adm2(self):
 
         # Metodo per il calcolo dei dati di piaggia e frana su area amministrativa 2 con correlazione
         nome_paese_per_iso = self.box_value_adm0.get()
+        iso3 = self.landslide_iso_cleaning(nome_paese_per_iso)
 
-        if nome_paese_per_iso == "Bolivia":
-            nome_paese_per_iso = "Bolivia, Plurinational State of"
-        elif nome_paese_per_iso == "Democratic Republic of the Congo":
-            nome_paese_per_iso = "Congo, The Democratic Republic of the"
-        elif nome_paese_per_iso == "Iran":
-            nome_paese_per_iso = "Iran, Islamic Republic of"
-        elif nome_paese_per_iso == "Ivory Coast":
-            nome_paese_per_iso = u"Côte d'Ivoire"
-        elif nome_paese_per_iso == "Lao PDR":
-            nome_paese_per_iso = "Lao People's Democratic Republic"
-        elif nome_paese_per_iso == "Lao PDR":
-            nome_paese_per_iso = "Lao People's Democratic Republic"
-        elif nome_paese_per_iso == "Sao Tome and Principe":
-            nome_paese_per_iso = "Sao Tome and Principe"
-        elif nome_paese_per_iso == "Syria":
-            nome_paese_per_iso = "Syrian Arab Republic"
-        elif nome_paese_per_iso == "Tanzania":
-            nome_paese_per_iso = "Tanzania, United Republic of"
-
-        iso3 = pycountry.countries.get(name=nome_paese_per_iso).alpha3
-
-        nuova_analisi_landslides = CIP.LandslideIncidentiPrecipitazioneAdmin2(iso3)
-        lst_prec_wb = nuova_analisi_landslides.precipitazioneWorldBank()
-
+        nuova_analisi_landslides = CIP.LandslideIncidentiPrecipitazioneAdmin2(iso3) 
         df_nasa_events = nuova_analisi_landslides.nasaEvents()
         df_nasa_events_country = df_nasa_events[df_nasa_events['iso3'] == iso3]
-        df_emdat_events = nuova_analisi_landslides.emdatEvents()
         df_fao_rain = nuova_analisi_landslides.faoPrecipitation()
         df_fao_rain_country = df_fao_rain[df_fao_rain['iso3'] == iso3]
 
@@ -409,44 +408,25 @@ class AppSPARC:
                         associazione_pioggia_frane_normalizzata = nuova_analisi_landslides.correlazioneDFNasaFaoNormalizzazione(solo_valori_pioggia,
                                                                                     eventi_gcl_adm2,
                                                                                     mesi_numerici)
-                        nuova_analisi_landslides.plotCorrelatedDataNasaFao(area_adm_code, associazione_pioggia_frane_normalizzata)
-                        listato = associazione_pioggia_frane_normalizzata['eventi_norm'][:].transpose().tolist()
+                        # print associazione_pioggia_frane_normalizzata
+                        # nuova_analisi_landslides.plotCorrelatedDataNasaFao(area_adm_code, associazione_pioggia_frane_normalizzata)
+                        listato = associazione_pioggia_frane_normalizzata['eventi_norm'][:].transpose().tolist()                        
                         listone_giordano[area_adm_code] = listato
                     except:
                         pass
 
-        # for chiave, valori in listone_giordano.items():
-        #     print chiave, valori
+        for chiave, valori in listone_giordano.items():
+            print chiave, valori
 
-
-    def landslide_national(self):
+    def landslide_adm0(self):        
 
         nome_paese_per_iso = self.box_value_adm0.get()
+        iso3 = self.landslide_iso_cleaning(nome_paese_per_iso)
+        
+        nuova_analisi = CIP.LandslideIncidentiPrecipitazioneNazionale(iso3)
 
-        if nome_paese_per_iso == "Bolivia":
-            nome_paese_per_iso = "Bolivia, Plurinational State of"
-        elif nome_paese_per_iso == "Democratic Republic of the Congo":
-            nome_paese_per_iso = "Congo, The Democratic Republic of the"
-        elif nome_paese_per_iso == "Iran":
-            nome_paese_per_iso = "Iran, Islamic Republic of"
-        elif nome_paese_per_iso == "Ivory Coast":
-            nome_paese_per_iso = u"Côte d'Ivoire"
-        elif nome_paese_per_iso == "Lao PDR":
-            nome_paese_per_iso = "Lao People's Democratic Republic"
-        elif nome_paese_per_iso == "Lao PDR":
-            nome_paese_per_iso = "Lao People's Democratic Republic"
-        elif nome_paese_per_iso == "Sao Tome and Principe":
-            nome_paese_per_iso = "Sao Tome and Principe"
-        elif nome_paese_per_iso == "Syria":
-            nome_paese_per_iso = "Syrian Arab Republic"
-        elif nome_paese_per_iso == "Tanzania":
-            nome_paese_per_iso = "Tanzania, United Republic of"
-
-        iso3 = pycountry.countries.get(name=nome_paese_per_iso).alpha3
-        nuova_analisi = Correlation_GLCFAO.LandslideMonth(iso3)
-
-        rains_trmm = nuova_analisi.trmm_precipitation_country()
-        glcs_tot = nuova_analisi.glc_events()
+        rains_trmm = nuova_analisi.trmmPrecipitationByCountry()
+        glcs_tot = nuova_analisi.nasaEvents()
         glcs_country = glcs_tot[glcs_tot['iso3'] == iso3]
 
         corr_nazionale = nuova_analisi.national_assessment(glcs_country, rains_trmm)
@@ -457,45 +437,20 @@ class AppSPARC:
 
         print("Country: %s ISO: %s" % (nazione[1], iso[1]))
 
-        for x in range(1,13):
-            corr_nazionale_subset = corr_nazionale.loc[x:x+1,'d3_n':'ev_n']
-            corr_nazionale_trans = corr_nazionale_subset[0:1].transpose()
+#         for x in range(1,13):
+#             corr_nazionale_subset = corr_nazionale.loc[x:x+1,'d3_n':'ev_n']
+#             corr_nazionale_trans = corr_nazionale_subset[0:1].transpose()
 
-            # corr_nazionale_trans.to_csv()
-
-    def landslide_mensile_NASA_WB_nazionale(self):
+    def landslide_mensile_NASA_WB_nazionale(self):        
 
         nome_paese_per_iso = self.box_value_adm0.get()
-
-        if nome_paese_per_iso == "Bolivia":
-            nome_paese_per_iso = "Bolivia, Plurinational State of"
-        elif nome_paese_per_iso == "Democratic Republic of the Congo":
-            nome_paese_per_iso = "Congo, The Democratic Republic of the"
-        elif nome_paese_per_iso == "Iran":
-            nome_paese_per_iso = "Iran, Islamic Republic of"
-        elif nome_paese_per_iso == "Ivory Coast":
-            nome_paese_per_iso = u"Côte d'Ivoire"
-        elif nome_paese_per_iso == "Lao PDR":
-            nome_paese_per_iso = "Lao People's Democratic Republic"
-        elif nome_paese_per_iso == "Lao PDR":
-            nome_paese_per_iso = "Lao People's Democratic Republic"
-        elif nome_paese_per_iso == "Sao Tome and Principe":
-            nome_paese_per_iso = "Sao Tome and Principe"
-        elif nome_paese_per_iso == "Syria":
-            nome_paese_per_iso = "Syrian Arab Republic"
-        elif nome_paese_per_iso == "Tanzania":
-            nome_paese_per_iso = "Tanzania, United Republic of"
-
-        iso3 = pycountry.countries.get(name=nome_paese_per_iso).alpha3
-        # self.area_messaggi.insert(INSERT, iso3)
-
-        ritornati = glc_splitMese.main(iso3)
-        # ritornati['ev_n'].plot(label='Events', kind="bar", color='green')
-        #
-        # plt.legend()
-        # plt.title(self.paese_nome)
-        # plt.show()
-        self.area_messaggi.insert(INSERT, ritornati)
+        iso3 = self.landslide_iso_cleaning(nome_paese_per_iso)
+        
+        nuova_analisi_NASA_WB = CIP.LandslideIncidentiPrecipitazioneNazionale(iso3)
+        
+        la_tabella_eventi_NASA = nuova_analisi_NASA_WB.data_fetching()
+        tabella_aggiustata = nuova_analisi_NASA_WB.data_cleaning(la_tabella_eventi_NASA)      
+        nuova_analisi_NASA_WB.data_analysis_vizualization(tabella_aggiustata)
 
 
 root = Tk()

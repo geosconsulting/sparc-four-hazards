@@ -1,0 +1,17 @@
+{
+    "contents" : "dati_fao <- read.csv(\"data_rain_evapo.csv\")\n\n\ndati_fao['prec_norm'] <- (dati_fao$precipitation- min(dati_fao$precipitation))/(max(dati_fao$precipitation)-min(dati_fao$precipitation))\ndati_fao['inc_norm'] <- (dati_fao$incidents - min(dati_fao$incidents))/(max(dati_fao$incidents)-min(dati_fao$incidents))\ndati_fao['evap_norm'] <- (dati_fao$evapotranspiration - min(dati_fao$evapotranspiration))/(max(dati_fao$evapotranspiration)-min(dati_fao$evapotranspiration))\ndati_fao['avp_norm'] <- (dati_fao$AVP - min(dati_fao$AVP))/(max(dati_fao$AVP)-min(dati_fao$AVP))\n\nbarplot(dati_fao$precipitation)\nplot(dati_fao$prec_norm,type = 'b',col='red')\nlines(dati_fao$inc_norm,type = 'b',col='blue')\nlines(dati_fao$evap_norm,type = 'b',col='green')\nlines(dati_fao$avp_norm,type = 'b')\n\nregAll <- lm(incidents ~ precipitation + evapotranspiration + AVP, data = dati_fao)\nprint(summary(regAll))\n\nregPrec <- lm(incidents ~ precipitation, data = dati_fao)\nprint(summary(regPrec))\n\nregPrecEv <- lm(incidents ~ precipitation + evapotranspiration, data = dati_fao)\nprint(summary(regPrecEv))\n\nregLog <- glm(incidents ~ precipitation + evapotranspiration, data = dati_fao)\nprint(summary(regLog))\n\n\n      \n\n\n\n\n\n",
+    "created" : 1468403782559.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3377806168",
+    "id" : "C445331A",
+    "lastKnownWriteTime" : 1468404274,
+    "path" : "C:/sparc/intermedi/calcolettiR/corre_pioggia_evap_incidenti-master/test_regrLin.R",
+    "project_path" : "test_regrLin.R",
+    "properties" : {
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "type" : "r_source"
+}

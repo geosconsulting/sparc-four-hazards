@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "# Variables related to your last day of recordings\nli <- 15\nfb <- 9\n\n# Code the control-flow construct\nif (li >=15 & fb >= 15) {\n  sms <- 2 * (li + fb)\n} else if (li <10 & fb < 10) {\n  sms <- 0.5 * (li + fb)\n} else {\n  sms <- li+fb\n}\n\n# Print the resulting sms to the console\nprint(sms)",
+    "created" : 1466263458082.000,
+    "dirty" : true,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "2979975754",
+    "id" : "DAEC2C38",
+    "lastKnownWriteTime" : 19140779460001857,
+    "last_content_update" : 1466263772625,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

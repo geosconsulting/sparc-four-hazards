@@ -1,0 +1,179 @@
+chapter: Elixir: A Declarative Extension to SQLAlchemy
+==================
+product_table = Table(
+    'product', metadata,
+    Column('sku', String(20), primary_key=True), 
+    Column('msrp', Numeric))
+store_table = Table(
+    'store', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', Unicode(255)))
+product_price_table = Table(
+    'product_price', metadata,
+Column('sku', None, ForeignKey('product.sku'), primary_key=True),
+Column('store_id', None, ForeignKey('store.id'), primary_key=True),
+    Column('price', Numeric, default=0))
+
+class Product(object):
+    def __init__(self, sku, msrp):
+        self.sku = sku
+        self.msrp = msrp
+        self.prices = []
+    def __repr__(self):
+        return '<Product %s>' % self.sku
+
+class Store(object):
+    def __init__(self, name):
+        self.name = name
+    def __repr__(self):
+        return '<Store %s>' % self.name
+
+class Price(object):
+    def __init__(self, product, store, price):
+        self.product = product
+        self.store = store
+        self.price = price
+    def __repr__(self):
+        return '<Price %s at %s for $%.2f>' % (
+            self.product.sku, self.store.name, self.price)
+
+mapper(Product, product_table, properties=dict(
+    prices=relation(Price, backref='product')))
+mapper(Store, store_table, properties=dict(
+    prices=relation(Price, backref='store')))
+mapper(Price, product_price_table)
+    
+    
+====================================
+class Product(Entity):
+    sku=Field(String(20), primary_key=True)
+    msrp=Field(Numeric)
+    prices=OneToMany('Price')
+    
+    def __repr__(self):
+        return '<Product %s>' % self.sku
+
+class Store(Entity):
+    name=Field(Unicode(255))
+    prices=OneToMany('Price')
+    
+    def __repr__(self):
+        return '<Store %s>' % self.name
+
+class Price(Entity):
+    price=Field(Numeric, default=0)
+    product=ManyToOne('Product')
+    store=ManyToOne('Store')
+    
+    def __repr__(self):
+        return '<Price %s at %s for $%.2f>' % (
+            self.product.sku, self.store.name, self.price)
+    
+    
+====================================
+elixir.options_defaults['autosetup'] = True
+    
+    
+====================================
+from elixir import *
+
+metadata.bind = 'sqlite://'
+
+class Product(Entity):
+    has_field('sku', String(20), primary_key=True)
+    has_field('msrp', Numeric)
+    has_many('prices', of_kind='Price')
+
+class Store(Entity):
+    has_field('name', Unicode(255))
+    has_many('prices', of_kind='Price')
+
+class Price(Entity):
+    has_field('price', Numeric, default=0)
+    belongs_to('product', of_kind='Product')
+    belongs_to('store', of_kind='Store')
+    
+    
+====================================
+class Price(Entity):
+    has_field('price', Numeric, default=0)
+    belongs_to('product', of_kind='Product')
+    belongs_to('store', of_kind='Store')
+    has_field('store_name', through='store', attribute='name')
+    has_field('sku', through='product')
+    
+    
+====================================
+class Product(Entity):
+    has_field('sku', String(20), primary_key=True)
+    has_field('msrp', Numeric)
+
+    # Using has_property DSL
+    has_property(
+        'sale_price1',
+        lambda c: column_property(c.msrp * 0.9))
+
+    # Using GenericProperty attribute
+    sale_price2 = GenericProperty(
+        lambda c: column_property(c.msrp * 0.8))
+
+    # Using ColumnProperty attribute
+    sale_price2 = ColumnProperty(
+        lambda c: c.msrp * 0.8)
+    
+    
+====================================
+class Entity2(Entity):
+    entity1=ManyToOne('package.model1.Entity')
+    
+    
+====================================
+class Product(Entity):
+    using_options(inheritance='multi', polymorphic=True)
+    sku=Field(String(20), primary_key=True)
+    msrp=Field(Numeric)
+
+class Clothing(Product):
+    using_options(inheritance='multi', polymorphic=True)
+    clothing_info=Field(String)
+
+class Accessory(Product):
+    using_options(inheritance='multi', polymorphic=True)
+    accessory_info=Field(String)
+    
+    
+====================================
+class Address(Entity):
+    has_field('street', Unicode(255))
+    has_field('city', Unicode(255))
+    has_field('postal_code', Unicode(10))
+
+# Create the DSL statement.
+is_addressable = associable(Address, 'addresses')
+
+class Brand(Entity):
+    has_field('name', Unicode(255)),
+    has_field('description', Unicode)
+    is_addressable()
+
+class Retailer(Entity):
+    has_field('name', Unicode(255)),
+    has_field('description', Unicode)
+    is_addressable()
+    
+    
+====================================
+class Product(Entity):
+    has_field('sku', String(20), primary_key=True)
+    has_field('msrp', Numeric)
+    acts_as_versioned()
+
+    def __repr__(self):
+        return '<Product %s, mrsp %s>' % (self.sku, self.msrp)
+
+    @after_revert
+    def price_rollback(self):
+        print "Rolling back prices to %s" % self.msrp
+    
+    
+==================
