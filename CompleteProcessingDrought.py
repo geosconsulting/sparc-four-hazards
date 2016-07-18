@@ -6,7 +6,6 @@ import os
 from osgeo import ogr
 ogr.UseExceptions()
 import glob
-import psycopg2
 import psycopg2.extras
 import arcpy
 arcpy.CheckOutExtension("spatial")
@@ -43,13 +42,13 @@ class ProjectDrought(object):
 
         self.cur = self.conn.cursor()
         self.drought_monthly_tifs_dir = "C:/sparc/input_data/drought/resampled_month/"
-        self.drought_seasonal_tifs_dir = "C:/sparc/input_data/drought/resampled_seasonal/"
+#       self.drought_seasonal_tifs_dir = "C:/sparc/input_data/drought/resampled_seasonal/"
 
         os.chdir(self.drought_monthly_tifs_dir)
         self.drought_monthly_tifs = glob.glob("*.tif")
 
-        os.chdir(self.drought_seasonal_tifs_dir)
-        self.drought_seasonal_tifs = glob.glob("*.tif")
+#         os.chdir(self.drought_seasonal_tifs_dir)
+#         self.drought_seasonal_tifs = glob.glob("*.tif")
 
     def admin_2nd_level_list(self, paese):
 
@@ -366,7 +365,7 @@ class ManagePostgresDBDrought(ProjectDrought):
                     month = os.path.splitext(solo_file)[0].split("_")[1]
                     unique_id = admin_name + "-" + admin_code + "-" + month
                     try:
-                        tabella = dbf.Table(file)
+                        tabella = dbf.Table(file)                        
                         tabella.open()
                         dct_valori_drought[unique_id] = {}
                         for recordio in tabella:

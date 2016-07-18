@@ -2,19 +2,13 @@
 
 import CompleteProcessingDrought as completeDrought
 import CompleteProcessingLandslide as completeLandslide
-# import Correlation_GLCFAO
 import CorrelazioneIncidentiPrecipitazioneLandslide as CIP
 import FloodDataManualUpload as fdup
-from intermedi.interfaces_discontinued import glc_splitMese
 
 from Tkinter import *
 import tkMessageBox
 import ttk
 import pycountry
-
-import psycopg2
-from psycopg2.extensions import AsIs
-
 
 class AppSPARC:
     def __init__(self, finestra):

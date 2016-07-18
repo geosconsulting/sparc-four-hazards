@@ -4,9 +4,11 @@ import os
 import glob
 import psycopg2
 import dbf
+import unicodedata
+import re
 
 def insert_drought_in_postgresql(paese,lista_inserimento):
-
+        
     schema = 'public'
     dbname = 'geonode-imports'
     user = 'geonode'
@@ -39,6 +41,19 @@ def insert_drought_in_postgresql(paese,lista_inserimento):
 
     return "Data have been uploaded...\n"
 
+def ripulisti(nome_zozzo):            
+            
+    unicode_zozzo = nome_zozzo.decode('utf-8')    
+    no_dash = re.sub('-', '_', nome_zozzo)
+    no_space = re.sub(' ', '', no_dash)
+    no_slash = re.sub('/', '_', no_space)
+    no_apice = re.sub('\'', '', no_slash)
+    no_bad_char = re.sub(r'-/\([^)]*\)', '', no_apice)
+    unicode_pulito = no_bad_char.decode('utf-8')
+    nome_pulito = unicodedata.normalize('NFKD', unicode_pulito).encode('ascii', 'ignore')
+    
+    return nome_pulito
+
 def collect_drought_poplation_frequencies_frm_dbfs(direttorio):
 
     dct_valori_drought = {}
@@ -60,7 +75,7 @@ def collect_drought_poplation_frequencies_frm_dbfs(direttorio):
                     unique_id = admin_name + "-" + admin_code + "-" + month
                     #print unique_id
                     try:
-                        tabella = dbf.Table(file)
+                        tabella = dbf.Table(file)  # @UndefinedVariable
                         tabella.open()
                         dct_valori_drought[unique_id] = {}
                         for recordio in tabella:
@@ -145,11 +160,13 @@ def prepare_insert_statements_drought_monthly_values(paese, adms, dct_values_ann
                 e = sys.exc_info()[0]
                 radice = lista[indice]
                 lista_proceso_conteggio += 1
-                print e, radice, lista_proceso_conteggio
+                print err,e, radice, lista_proceso_conteggio
 
 
         linee =[]
         for single_adm_chiavi,single_adm_value in sorted(dct_all_admin_values.iteritems()):
+            single_adm_value['adm2_name'] = ripulisti(single_adm_value['adm2_name'])
+            single_adm_value['adm1_name'] = ripulisti(single_adm_value['adm1_name'])            
             for adm2_drought_keys, adm2_drought_values in sorted(dct_values_annual_drought.iteritems()):
                 val_adm = int(adm2_drought_keys.split("-")[1])
                 if single_adm_chiavi == val_adm:
@@ -166,24 +183,11 @@ def prepare_insert_statements_drought_monthly_values(paese, adms, dct_values_ann
                                     linee.append(linea_adm + "," + linea_calc)
 
         inserimento_mensili = []
-        for linea in linee:
-            #print linea,len(linea)
+        for linea in linee:           
             inserimento = "INSERT INTO public.sparc_population_month_drought" + \
                            " (iso3,adm0_name,adm0_code,adm1_name,adm1_code,adm2_code,adm2_name," \
                            "month, freq, pop)" \
-                           "VALUES(" + linea + ");"
-            #print inserimento
+                           "VALUES(" + linea + ");"            
             inserimento_mensili.append(inserimento)
 
         return lista, dct_all_admin_values,inserimento_mensili
-
-##paese = 'Peru'
-##PROJ_DIR = "c:/sparc/projects/drought/"
-##dirOutPaese = PROJ_DIR + paese
-##
-##raccogli_da_files_anno = collect_drought_poplation_frequencies_frm_dbfs(dirOutPaese)
-##adms=set()
-##for chiave, valori in sorted(raccogli_da_files_anno.iteritems()):
-##    adms.add(chiave.split("-")[1])
-##raccolti_anno = prepare_insert_statements_drought_monthly_values(paese, adms, raccogli_da_files_anno)
-##insert_drought_in_postgresql(paese, raccolti_anno[2])
