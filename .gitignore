@@ -1,4 +1,4 @@
 meteorological/
 input_data/
 projects/
-*.pyc
+.Rproj.user

@@ -66,10 +66,8 @@ class ProjectDrought(object):
         for feature in self.layer:
             cod_admin = feature.GetField(self.campo_iso_admin)
             nome_zozzo = feature.GetField(self.campo_nome_admin)
-
             unicode_zozzo = nome_zozzo.decode('utf-8')
             nome_per_combo = unicodedata.normalize('NFKD', unicode_zozzo)
-
             no_dash = re.sub('-', '_', nome_zozzo)
             no_space = re.sub(' ', '', no_dash)
             no_slash = re.sub('/', '_', no_space)
@@ -281,7 +279,7 @@ class ManagePostgresDBDrought(ProjectDrought):
 
     def check_if_monthly_table_drought_exists(self):
 
-        esiste_tabella = "SELECT '"+ self.schema + ".sparc_population_month_drought'::regclass"
+        esiste_tabella = "SELECT '" + self.schema + ".sparc_population_month_drought'::regclass"
         connection_string = "dbname=%s user=%s password=%s" % (self.dbname, self.user,self.password)
         conn_check = psycopg2.connect(connection_string)
         cur_check = conn_check.cursor()
@@ -349,7 +347,7 @@ class ManagePostgresDBDrought(ProjectDrought):
         direttorio = self.dirOutPaese
 
         dct_valori_drought = {}
-        for direttorio_principale, direttorio_secondario, file_vuoto in os.walk(direttorio):
+        for direttorio_principale, direttorio_secondario, file_vuoto in os.walk(direttorio): 
             if direttorio_principale != direttorio:
                 linea_taglio = 0
                 contatore = 0
@@ -360,12 +358,12 @@ class ManagePostgresDBDrought(ProjectDrought):
                 admin_name = direttorio_principale[0:linea_taglio-1].split("\\")[1]
                 admin_code = direttorio_principale[linea_taglio:]
                 files_dbf = glob.glob(direttorio_principale + "/*stat*.dbf")
-                for file in files_dbf:
-                    solo_file = file.split("\\")[-1]
+                for file_disco in files_dbf:
+                    solo_file = file_disco.split("\\")[-1]
                     month = os.path.splitext(solo_file)[0].split("_")[1]
                     unique_id = admin_name + "-" + admin_code + "-" + month
                     try:
-                        tabella = dbf.Table(file)                        
+                        tabella = dbf.Table(file_disco)                                            # @UndefinedVariable
                         tabella.open()
                         dct_valori_drought[unique_id] = {}
                         for recordio in tabella:
@@ -374,6 +372,19 @@ class ManagePostgresDBDrought(ProjectDrought):
                     except:
                         pass
         return dct_valori_drought
+
+    def ripulisti(self,nome_zozzo):            
+                
+        unicode_zozzo = nome_zozzo.decode('utf-8')    
+        no_dash = re.sub('-', '_', nome_zozzo)
+        no_space = re.sub(' ', '', no_dash)
+        no_slash = re.sub('/', '_', no_space)
+        no_apice = re.sub('\'', '', no_slash)
+        no_bad_char = re.sub(r'-/\([^)]*\)', '', no_apice)
+        unicode_pulito = no_bad_char.decode('utf-8')
+        nome_pulito = unicodedata.normalize('NFKD', unicode_pulito).encode('ascii', 'ignore')
+        
+        return nome_pulito
 
     def prepare_insert_statements_drought_monthly_values(self,adms, dct_values_annual_drought):
 
@@ -407,7 +418,7 @@ class ManagePostgresDBDrought(ProjectDrought):
 
             return mese
 
-        schema = 'public'
+#         schema = 'public'
         dbname = 'geonode-imports'
         user = 'geonode'
         password = 'geonode'
@@ -441,7 +452,9 @@ class ManagePostgresDBDrought(ProjectDrought):
 
         linee =[]
         for single_adm_chiavi,single_adm_value in sorted(dct_all_admin_values.iteritems()):
-            for adm2_drought_keys, adm2_drought_values in sorted(dct_values_annual_drought.iteritems()):
+            single_adm_value['adm2_name'] = self.ripulisti(single_adm_value['adm2_name'])
+            single_adm_value['adm1_name'] = self.ripulisti(single_adm_value['adm1_name'])        
+            for adm2_drought_keys, adm2_drought_values in sorted(dct_values_annual_drought.iteritems()): 
                 val_adm = int(adm2_drought_keys.split("-")[1])
                 if single_adm_chiavi == val_adm:
                     month_numeric = int(adm2_drought_keys.split('drmo')[1])
@@ -475,7 +488,7 @@ class ManagePostgresDBDrought(ProjectDrought):
             self.cur.execute(sql_clean)
 
     def insert_drought_in_postgresql(self, lista_inserimento):
-
+        
         for ritornato in lista_inserimento:
             self.cur.execute(ritornato)
 

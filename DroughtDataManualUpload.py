@@ -43,7 +43,7 @@ def insert_drought_in_postgresql(paese,lista_inserimento):
 
 def ripulisti(nome_zozzo):            
             
-    unicode_zozzo = nome_zozzo.decode('utf-8')    
+#     unicode_zozzo = nome_zozzo.decode('utf-8')    
     no_dash = re.sub('-', '_', nome_zozzo)
     no_space = re.sub(' ', '', no_dash)
     no_slash = re.sub('/', '_', no_space)
@@ -169,8 +169,8 @@ def prepare_insert_statements_drought_monthly_values(paese, adms, dct_values_ann
             single_adm_value['adm1_name'] = ripulisti(single_adm_value['adm1_name'])            
             for adm2_drought_keys, adm2_drought_values in sorted(dct_values_annual_drought.iteritems()):
                 val_adm = int(adm2_drought_keys.split("-")[1])
-                if single_adm_chiavi == val_adm:
-                    month_numeric = int(adm2_drought_keys.split('drmo')[1])
+                if single_adm_chiavi == val_adm:                   
+                    month_numeric = int(adm2_drought_keys.split('drmo')[1])                    
                     month_textual = associate_raster_to_month(month_numeric)
                     linea_adm = str("'" + single_adm_value['iso3']).upper() + "','" + str(single_adm_value['adm0_name']).capitalize() + "'," + single_adm_value['adm0_code'] + \
                                ",'" + str(single_adm_value['adm1_name']).capitalize() + "'," + single_adm_value['adm1_code'] + \

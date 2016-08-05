@@ -175,8 +175,9 @@ class HazardAssessmentCountryFlood(Progetto):
 
     def estrazione_poly_admin(self):
 
-        filter_field_name = '"' + self.campo_nome_paese + "," + self.campo_iso_paese + "," + self.campo_nome_admin1 + "," + \
-                            self.campo_iso_admin1 + "," + self.campo_nome_admin + "," + self.campo_iso_admin + '"'
+        filter_field_name = '"' + self.campo_nome_paese + "," + self.campo_iso_paese + "," + \
+                            self.campo_nome_admin1 + "," + self.campo_iso_admin1 + "," + self.campo_nome_admin + \
+                            "," + self.campo_iso_admin + '"'
 
         # Get the input Layer
         inDriver = ogr.GetDriverByName("ESRI Shapefile")
