@@ -66,6 +66,7 @@ class ProjectDrought(object):
         for feature in self.layer:
             cod_admin = feature.GetField(self.campo_iso_admin)
             nome_zozzo = feature.GetField(self.campo_nome_admin)
+            print nome_zozzo,cod_admin
             unicode_zozzo = nome_zozzo.decode('utf-8')
             nome_per_combo = unicodedata.normalize('NFKD', unicode_zozzo)
             no_dash = re.sub('-', '_', nome_zozzo)
@@ -375,6 +376,7 @@ class ManagePostgresDBDrought(ProjectDrought):
 
     def ripulisti(self,nome_zozzo):            
                 
+        print nome_zozzo        
         unicode_zozzo = nome_zozzo.decode('utf-8')    
         no_dash = re.sub('-', '_', nome_zozzo)
         no_space = re.sub(' ', '', no_dash)

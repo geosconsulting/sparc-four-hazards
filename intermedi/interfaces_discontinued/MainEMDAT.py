@@ -58,14 +58,11 @@ class AppSPARC_EMDAT:
         df_danni = pd.DataFrame(danni_paese)
         df_danni = df_danni.set_index('disaster_no')
 
-        #TRATTAMENTO DATI IN DB
-        #OBJ_EMDAT.write_in_db(df_danni)
-        #di_che_parliamo = richiesta.read_from_db(hazard)
 
         eventi_by_coutry = df_danni.groupby('iso')
         # TODO: qui l'errore per il quale scrive Dominican Republic (the)
         df_paese = eventi_by_coutry.get_group(iso_paese)
-        paese = df_paese.country_name[0]
+        # paese = df_paese.country_name[0]
         iso = df_paese.iso[0]
         lista_locazioni = list(df_paese.location)
         print lista_locazioni

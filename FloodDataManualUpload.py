@@ -24,6 +24,7 @@ def inserisci_postgresql(paese,lista_inserimento):
     conn.commit()
 
     for inserimento_singolo in lista_inserimento:
+        print inserimento_singolo
         cur.execute(inserimento_singolo)
 
     try:

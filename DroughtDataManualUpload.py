@@ -42,8 +42,9 @@ def insert_drought_in_postgresql(paese,lista_inserimento):
     return "Data have been uploaded...\n"
 
 def ripulisti(nome_zozzo):            
-            
-#     unicode_zozzo = nome_zozzo.decode('utf-8')    
+         
+    print nome_zozzo   
+    unicode_zozzo = nome_zozzo.decode('utf-8')    
     no_dash = re.sub('-', '_', nome_zozzo)
     no_space = re.sub(' ', '', no_dash)
     no_slash = re.sub('/', '_', no_space)

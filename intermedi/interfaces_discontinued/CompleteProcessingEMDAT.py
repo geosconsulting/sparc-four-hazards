@@ -17,9 +17,11 @@ ogr.UseExceptions()
 class ScrapingEMDAT(object):
 
     def __init__(self, hazard):
-        self.continent = "Africa%27%2C%27Americas%27%2C%27Asia"
+
+        self.continent = "Africa%27%2C%27Americas%27%2C%27Asias%27%2C%27Oceania"
         self.hazard = hazard
         self.stringa_richiesta = 'http://www.emdat.be/disaster_list/php/search.php?continent=' + self.continent + '&region=&ISO=&from=1900&to=2015&group=&type=' + self.hazard
+        print self.stringa_richiesta
         self.engine = create_engine(r'postgresql://geonode:geonode@localhost/geonode-imports')
         self.connection = self.engine.connect()
         self.table_name = "sparc_emdat_scraping_" + hazard
@@ -38,6 +40,7 @@ class ScrapingEMDAT(object):
         self.connection.close()
 
     def read_from_db(self, hazard):
+
         df_da_sql = pd.read_sql_table(self.table_name, self.engine, index_col='disaster_no')
         self.connection.close()
         return df_da_sql
@@ -45,6 +48,7 @@ class ScrapingEMDAT(object):
 class GeocodeEMDAT(object):
 
     def __init__(self, paese, hazard):
+
         self.paese = paese
         self.hazard = hazard
         self.geolocator = Nominatim()
@@ -139,8 +143,12 @@ class GeocodeEMDAT(object):
 
     def calc_poligono_controllo(self):
 
-        coords_file_in = "c:/sparc/input_data/geocoded/new_geocoded_EMDAT/" + self.paese + self.hazard + ".txt"
-        coords_file_out = str('c:/data/tools/sparc/input_data/geocoded/new_geocoded_EMDAT/' + str(self.paese) + self.hazard + '.csv')
+        coords_file_in = "c:/sparc/input_data/geocoded/new_geocoded_EMDAT/" + \
+                         self.paese + \
+                         self.hazard + ".txt"
+        coords_file_out = str('c:/sparc/input_data/geocoded/new_geocoded_EMDAT/' +
+                              str(self.paese) +
+                              self.hazard + '.csv')
 
         dentro = 0
         fuori = 0

@@ -881,7 +881,7 @@ class ManagePostgresDB(Progetto):
         # for ritornato in ritornati_passati:
         #     self.cur.execute(ritornato)
         for inserimento_singolo in lista_inserimento:
-            #print inserimento_singolo
+            print inserimento_singolo
             self.cur.execute(inserimento_singolo)
 
     def save_changes_in_postgres(self):

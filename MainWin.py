@@ -219,7 +219,7 @@ class AppSPARC:
 
         paese = self.box_value_adm0.get()
 
-        proj_dir = "c:/data/tools/sparc/projects/floods/"
+        proj_dir = "c:/sparc/projects/floods/"
         dirOutPaese = proj_dir + paese
         fillolo = dirOutPaese + "/" + paese + ".txt"
 
@@ -236,9 +236,6 @@ class AppSPARC:
         risultato = fdup.inserisci_postgresql(paese, raccolti_mese)
         self.area_messaggi.insert(INSERT, risultato)
 
-
-
-
 root = Tk()
-root.title("SPARC Flood, Drought and Landslide Assessment")
+root.title("SPARC Flood and Drought Assessment")
 app = AppSPARC(root)
